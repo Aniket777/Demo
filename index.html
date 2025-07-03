@@ -897,6 +897,98 @@
             background: #fff;
             resize: vertical;
         }
+        .screen-desc {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px 18px;
+            border-radius: 8px;
+            color: #444;
+            margin-bottom: 18px;
+            font-size: 1em;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .or-divider {
+            text-align: center;
+            color: #888;
+            margin: 18px 0 10px 0;
+            font-weight: 500;
+            font-size: 1.1em;
+        }
+        .eda-btn {
+            background: #764ba2 !important;
+            margin-bottom: 18px;
+        }
+        .eda-btn:hover {
+            background: #667eea !important;
+        }
+        .instructions-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 24px 30px;
+            max-width: 700px;
+            margin: 30px auto 20px auto;
+            font-size: 1.1em;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .rule-ref {
+            font-size: 0.95em;
+            color: #888;
+            margin-bottom: 6px;
+            font-style: italic;
+        }
+        .doc-snippet {
+            display: block;
+            background: #fffbe6;
+            color: #856404;
+            border-left: 3px solid #ffc107;
+            padding: 6px 12px;
+            margin: 6px 0 0 0;
+            font-size: 0.97em;
+            font-style: italic;
+        }
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(255,255,255,0.85);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .processing-box {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(102,126,234,0.10);
+            padding: 48px 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .processing-spinner {
+            border: 6px solid #e1e5e9;
+            border-top: 6px solid #667eea;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 24px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .processing-msg {
+            font-size: 1.3em;
+            color: #667eea;
+            font-weight: 500;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -947,19 +1039,19 @@
                 <h1>Upload Schematic</h1>
                 <p>Upload your circuit diagram for analysis</p>
             </div>
-            
-            <div class="upload-area" id="upload-area" onclick="uploadFile()">
-                <div class="upload-icon">📁</div>
-                <h3>Upload Demo Schematic</h3>
-                <p>Click to upload your circuit diagram</p>
+            <div class="screen-desc">This step lets you upload your schematic as a .edf file or connect directly to your EDA tool. VoltAI will use this data for rule-based analysis and verification. (Demo only: no real upload or connection occurs.)</div>
+            <div class="upload-area" id="upload-area" onclick="uploadEDF()">
+                <div class="upload-icon">📄</div>
+                <h3>Upload .edf File</h3>
+                <p>Click to select and upload your schematic (.edf)</p>
             </div>
-            
+            <div class="or-divider">or</div>
+            <button class="btn eda-btn" onclick="connectEDA()">🔗 Connect to EDA Tool</button>
             <div class="success-message" id="upload-success" style="display: none;">
-                ✅ Schematic uploaded successfully!
+                ✅ Schematic uploaded/connected successfully!
             </div>
-            
-            <button class="btn" onclick="nextToRules()" id="next-rules-btn" style="display: none;">
-                Next: Configure Rules
+            <button class="btn" onclick="nextToInstructions()" id="next-instructions-btn" style="display: none;">
+                Next: Instructions
             </button>
         </div>
 
@@ -970,39 +1062,38 @@
                 <p>Set analysis parameters and thresholds</p>
             </div>
             
-            <!-- PDF Upload Section -->
+            <!-- Datasheet/Design Doc Upload Area -->
             <div class="form-group">
-                <label for="pdf-upload">Upload PDF Rules Document</label>
-                <div class="upload-area" id="pdf-upload-area" onclick="uploadPDF()">
+                <label>Datasheet / Design Documentation</label>
+                <div class="screen-desc">Upload your datasheet or design documentation to let VoltAI extract rules using LLMs. (Demo: No real upload occurs.)</div>
+                <div class="upload-area" id="doc-upload-area">
                     <div class="upload-icon">📄</div>
-                    <h3>Upload PDF Rules</h3>
-                    <p>Click to upload PDF containing design rules</p>
+                    <h3>Upload Datasheet / Design Doc</h3>
+                    <p>Click the button below to upload your documents</p>
+                    <button class="btn" id="doc-upload-btn" onclick="uploadDocsDemo()">Upload Documents</button>
                 </div>
-                <div class="success-message" id="pdf-success" style="display: none;">
-                    ✅ PDF uploaded and rules extracted successfully!
+                <div class="success-message" id="doc-upload-success" style="display: none;">
+                    ✅ Documents uploaded! LLM is generating rules...
                 </div>
             </div>
-            
-            <!-- Extracted Rules Section -->
+            <!-- Extracted Rules Section with references (initially hidden) -->
             <div class="extracted-rules" id="extracted-rules" style="display: none;">
                 <h3><span class="category-icon">📝</span> Extracted Rules</h3>
                 <div class="rule-editor">
+                    <div class="rule-ref">Extracted from: Datasheet, Section 3.2<br><span class='doc-snippet'>&ldquo;The maximum safe voltage for this device is 48V. Clearance must be at least 0.5mm.&rdquo;</span></div>
                     <textarea id="rules-textarea" placeholder="Rules will be extracted here..."># VoltAI Design Rules Configuration
 
 # Safety Rules
 SAFETY_MAX_VOLTAGE = 48V
 SAFETY_MIN_CLEARANCE = 0.5mm
-SAFETY_GROUND_REQUIRED = true
-
-# Performance Rules  
-PERF_MIN_TRACE_WIDTH = 0.2mm
-PERF_MAX_CURRENT_DENSITY = 10A/mm²
-PERF_TEMP_THRESHOLD = 85°C
-
-# Compliance Rules
-COMPLIANCE_IPC_STANDARD = "IPC-2221"
-COMPLIANCE_EMI_EMISSIONS = "EN55022"
-COMPLIANCE_SAFETY_CERT = "UL60950"</textarea>
+SAFETY_GROUND_REQUIRED = true</textarea>
+                </div>
+                <div class="rule-editor">
+                    <div class="rule-ref">Extracted from: Design Documentation, Section 5.1<br><span class='doc-snippet'>&ldquo;All signal traces must maintain a minimum spacing of 0.15mm. Crosstalk should not exceed 5%.&rdquo;</span></div>
+                    <textarea rows="7" readonly># Additional extracted rules
+MIN_TRACE_SPACING = 0.15mm
+MAX_CROSSTALK = 5%
+TERMINATION_REQUIRED = true</textarea>
                 </div>
             </div>
             
@@ -1196,6 +1287,14 @@ COMPLIANCE_SAFETY_CERT = "UL60950"</textarea>
                 </div>
             </div>
         </div>
+
+        <!-- Processing Animation Overlay -->
+        <div class="processing-overlay" id="processing-overlay" style="display: none;">
+            <div class="processing-box">
+                <div class="processing-spinner"></div>
+                <div class="processing-msg">Analyzing the schematic...</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1240,41 +1339,43 @@ COMPLIANCE_SAFETY_CERT = "UL60950"</textarea>
             }
         }
 
-        function uploadFile() {
+        function uploadEDF() {
             const uploadArea = document.getElementById('upload-area');
             const successMessage = document.getElementById('upload-success');
-            const nextButton = document.getElementById('next-rules-btn');
-            
+            const nextButton = document.getElementById('next-instructions-btn');
             uploadArea.classList.add('uploaded');
-            uploadArea.innerHTML = '<div class="upload-icon">✅</div><h3>File Uploaded!</h3><p>schematic_demo.cad</p>';
+            uploadArea.innerHTML = '<div class="upload-icon">✅</div><h3>.edf File Uploaded!</h3><p>demo_schematic.edf</p>';
+            successMessage.style.display = 'block';
+            nextButton.style.display = 'none';
+            setTimeout(() => {
+                showScreen('rules');
+            }, 1000);
+        }
+
+        function connectEDA() {
+            const uploadArea = document.getElementById('upload-area');
+            const successMessage = document.getElementById('upload-success');
+            const nextButton = document.getElementById('next-instructions-btn');
+            uploadArea.classList.add('uploaded');
+            uploadArea.innerHTML = '<div class="upload-icon">🔗</div><h3>EDA Tool Connected!</h3><p>Connected to: DemoEDA</p>';
             successMessage.style.display = 'block';
             nextButton.style.display = 'block';
-            uploadedFile = true;
-        }
-
-        function nextToRules() {
-            if (uploadedFile) {
-                showScreen('rules');
-            } else {
-                alert('Please upload a schematic first');
-            }
-        }
-
-        function uploadPDF() {
-            const uploadArea = document.getElementById('pdf-upload-area');
-            const successMessage = document.getElementById('pdf-success');
-            const extractedRules = document.getElementById('extracted-rules');
-            
-            // Simulate PDF upload and rule extraction
-            uploadArea.classList.add('uploaded');
-            uploadArea.innerHTML = '<div class="upload-icon">✅</div><h3>PDF Uploaded!</h3><p>design_rules.pdf</p>';
-            successMessage.style.display = 'block';
-            extractedRules.style.display = 'block';
-            
-            // Simulate rule extraction delay
             setTimeout(() => {
-                successMessage.innerHTML = '✅ PDF uploaded and rules extracted successfully!';
+                showScreen('rules');
             }, 1000);
+        }
+
+        function uploadDocsDemo() {
+            const uploadArea = document.getElementById('doc-upload-area');
+            const successMessage = document.getElementById('doc-upload-success');
+            const extractedRules = document.getElementById('extracted-rules');
+            uploadArea.classList.add('uploaded');
+            uploadArea.innerHTML = '<div class="upload-icon">✅</div><h3>Documents Uploaded!</h3><p>LLM is generating rules...</p>';
+            successMessage.style.display = 'block';
+            setTimeout(() => {
+                successMessage.style.display = 'none';
+                extractedRules.style.display = 'block';
+            }, 2500);
         }
 
         function updateCriticality(category) {
@@ -1289,7 +1390,13 @@ COMPLIANCE_SAFETY_CERT = "UL60950"</textarea>
         }
 
         function nextToAlerts() {
-            showScreen('alerts');
+            // Show processing overlay
+            const overlay = document.getElementById('processing-overlay');
+            overlay.style.display = 'flex';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                showScreen('alerts');
+            }, 2000);
         }
 
         function backToRules() {
